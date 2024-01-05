@@ -22,7 +22,7 @@ localstack extensions dev enable .
 You can then start LocalStack with `EXTENSION_DEV_MODE=1` to load all enabled extensions:
 
 ```bash
-EXTENSION_DEV_MODE=1 localstack start
+EXTENSION_DEV_MODE=1 localstack start -e TS_AUTHKEY=$TS_AUTHKEY
 ```
 
 ## Install from GitHub repository
