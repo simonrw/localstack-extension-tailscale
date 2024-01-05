@@ -4,6 +4,8 @@ mkShell {
   packages = [
     python3
     python3Packages.venvShellHook
+    go
+    docker
   ];
 
   venvDir = ".venv";

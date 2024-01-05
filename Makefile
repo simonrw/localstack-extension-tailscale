@@ -1,3 +1,4 @@
+DOCKER_IMAGE_NAME := srwalker101/tsproxy
 VENV_BIN = python3 -m venv
 VENV_DIR ?= .venv
 VENV_ACTIVATE = $(VENV_DIR)/bin/activate
@@ -28,5 +29,8 @@ publish: clean-dist venv dist
 
 clean-dist: clean
 	rm -rf dist/
+
+docker-build:
+	docker build -t $(DOCKER_IMAGE_NAME) .
 
 .PHONY: clean clean-dist dist install publish
