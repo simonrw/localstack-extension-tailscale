@@ -21,10 +21,14 @@ func main() {
 	if upstreamURL == "" {
 		upstreamURL = "http://localstack:4566"
 	}
+	hostname := os.Getenv("TSPROXY_HOSTNAME")
+	if hostname == "" {
+		hostname = "lstsproxy"
+	}
 
 	// setup tailscale
 	s := new(tsnet.Server)
-	s.Hostname = "lstsproxy"
+	s.Hostname = hostname
 	s.Ephemeral = true
 	defer s.Close()
 
