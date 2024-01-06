@@ -26,7 +26,7 @@ class MyExtension(Extension):
         logging.getLogger("localtailstackscale").setLevel(level)
 
     def on_platform_ready(self):
-        print("MyExtension: localstack is running")
+        LOG.info("%s: localstack is running", self.name)
 
         # start up tailscale container
         container_config = ContainerConfiguration(
@@ -44,5 +44,6 @@ class MyExtension(Extension):
         self.running_container.wait_until_ready()
 
     def on_platform_shutdown(self):
+        LOG.info("%s shutting down", self.name)
         if self.running_container:
             self.running_container.shutdown()
