@@ -11,6 +11,8 @@ from localstack.utils.bootstrap import DOCKER_CLIENT, Container, RunningContaine
 
 LOG = logging.getLogger(__name__)
 
+AUTHKEY_NAME = "TS_AUTHKEY"
+
 
 class MyExtension(Extension):
     name = "localtailstackscale"
@@ -25,16 +27,25 @@ class MyExtension(Extension):
             level = logging.INFO
         logging.getLogger("localtailstackscale").setLevel(level)
 
+        # validation
+        if AUTHKEY_NAME not in os.environ:
+            LOG.warning(
+                "%s not found in environment. Check sidecar container logs for authorization instructions",
+                AUTHKEY_NAME,
+            )
+
     def on_platform_ready(self):
         LOG.info("%s: localstack is running", self.name)
 
         # start up tailscale container
         container_config = ContainerConfiguration(
+            # TODO: public image
             image_name="srwalker101/tsproxy",
             env_vars={
                 "TSPROXY_UPSTREAM_URL": f"http://{get_endpoint_for_network()}:4566",
-                "TS_PROXY_PORT": "1992",
-                "TS_AUTHKEY": os.environ["TS_AUTHKEY"],
+                "TSPROXY_PORT": os.getenv("TSPROXY_PORT", ""),
+                "TSPROXY_HOSTNAME": os.getenv("TSPROXY_HOSTNAME", ""),
+                "TS_AUTHKEY": os.getenv("TS_AUTHKEY", ""),
             },
         )
         # TODO: error handling
