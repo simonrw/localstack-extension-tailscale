@@ -9,7 +9,7 @@ from localstack.utils.container_utils.container_client import (
 )
 from localstack.utils.bootstrap import DOCKER_CLIENT, Container, RunningContainer
 
-LOG = logging.getLogger(__name__)
+LOG = logging.getLogger("localstacktailscale.tsproxy")
 
 AUTHKEY_NAME = "TS_AUTHKEY"
 
