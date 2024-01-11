@@ -47,5 +47,7 @@ func main() {
 	}
 
 	handler := httputil.NewSingleHostReverseProxy(url)
+    log.Printf("Host: %s", hostname)
+    log.Printf("Listening on port %s", port)
 	log.Fatal(http.Serve(ln, handler))
 }
