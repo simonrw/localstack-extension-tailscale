@@ -14,7 +14,7 @@ LOG = logging.getLogger("localstacktailscale.tsproxy")
 AUTHKEY_NAME = "TS_AUTHKEY"
 
 
-class MyExtension(Extension):
+class LocalStackTailscale(Extension):
     name = "localtailstackscale"
 
     def __init__(self):
