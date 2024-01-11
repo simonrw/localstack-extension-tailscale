@@ -43,7 +43,7 @@ class LocalStackTailscale(Extension):
             image_name="srwalker101/tsproxy",
             env_vars={
                 "TSPROXY_UPSTREAM_URL": f"http://{get_endpoint_for_network()}:4566",
-                "TSPROXY_PORT": os.getenv("TSPROXY_PORT", ""),
+                "TSPROXY_PORT": os.getenv("TSPROXY_PORT", "4566"),
                 "TSPROXY_HOSTNAME": os.getenv("TSPROXY_HOSTNAME", ""),
                 "TS_AUTHKEY": os.getenv("TS_AUTHKEY", ""),
             },
