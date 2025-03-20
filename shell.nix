@@ -6,12 +6,13 @@ mkShell {
     python3Packages.venvShellHook
     go
     docker
+    uv
+    ruff
   ];
 
   venvDir = ".venv";
 
   postVenvCreation = ''
-    python -m pip install pip-tools
   '';
 
   postShellHook = ''
