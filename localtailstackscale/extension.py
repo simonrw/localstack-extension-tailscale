@@ -49,6 +49,7 @@ class LocalStackTailscale(Extension):
         env: dict[str, str] = {}
         for key, value in os.environ.items():
             if key.startswith("TS_"):
+                LOG.debug("including environment variable '%s'", key)
                 env[key] = value
 
         # start up tailscale container
