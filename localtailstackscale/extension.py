@@ -2,13 +2,14 @@ import logging
 import os
 import socket
 import threading
+from pathlib import Path
 
 from localstack import config
 from localstack.extensions.api import Extension
-from localstack.utils.docker_utils import DOCKER_CLIENT
+from localstack.utils.docker_utils import DOCKER_CLIENT, get_host_path_for_path_in_docker
 from localstack.utils.container_utils.container_client import (
     CancellableStream,
-    ContainerConfiguration,
+    ContainerConfiguration, VolumeMappings,
 )
 
 logging.basicConfig(level=logging.DEBUG)
@@ -22,6 +23,7 @@ def print_logs(stream: CancellableStream):
 
 class LocalStackTailscale(Extension):
     name: str = "localtailstackscale"
+    volume: str
 
     def __init__(self):
         self.container_id: str | None = None
@@ -32,6 +34,11 @@ class LocalStackTailscale(Extension):
         else:
             level = logging.INFO
         logging.getLogger("localtailstackscale").setLevel(level)
+
+        extension_container_path = Path(config.dirs.cache) / "localstack-tailscale" / "state"
+        extension_container_path.mkdir(parents=True, exist_ok=True)
+        self.volume = get_host_path_for_path_in_docker(str(extension_container_path))
+        LOG.debug("storing tailscale state at '%s'", self.volume)
 
     def on_platform_ready(self):
         LOG.info("%s: localstack is running", self.name)
@@ -52,11 +59,15 @@ class LocalStackTailscale(Extension):
                 LOG.debug("including environment variable '%s'", key)
                 env[key] = value
 
+        # ensure the state directory is set if given
+        env["TS_STATE_DIR"] = "/var/lib/tailscale"
+
         # start up tailscale container
         container_config = ContainerConfiguration(
             image_name="tailscale/tailscale",
             env_vars=env,
             network=f"container:{localstack_container_id}",
+            volumes=VolumeMappings([(self.volume, "/var/lib/tailscale")]),
         )
         # TODO: error handling
         self.container_id = DOCKER_CLIENT.create_container_from_config(container_config)
