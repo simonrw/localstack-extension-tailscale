@@ -1,24 +1,30 @@
-import os
 import logging
-from localstack import config
+import os
+import socket
+import threading
 
-from localstack.extensions.api import Extension, http, aws
-from localstack.utils.container_networking import get_endpoint_for_network
+from localstack import config
+from localstack.extensions.api import Extension
+from localstack.utils.docker_utils import DOCKER_CLIENT
 from localstack.utils.container_utils.container_client import (
+    CancellableStream,
     ContainerConfiguration,
 )
-from localstack.utils.bootstrap import DOCKER_CLIENT, Container, RunningContainer
 
-LOG = logging.getLogger("localstacktailscale.tsproxy")
+logging.basicConfig(level=logging.DEBUG)
+LOG = logging.getLogger("localstack.extension.tailscale")
 
-AUTHKEY_NAME = "TS_AUTHKEY"
+
+def print_logs(stream: CancellableStream):
+    for line in stream:
+        LOG.debug("[tailscale] %s", line.decode().strip())
 
 
 class LocalStackTailscale(Extension):
-    name = "localtailstackscale"
+    name: str = "localtailstackscale"
 
     def __init__(self):
-        self.running_container: RunningContainer | None = None
+        self.container_id: str | None = None
 
     def on_extension_load(self):
         if config.DEBUG:
@@ -27,34 +33,40 @@ class LocalStackTailscale(Extension):
             level = logging.INFO
         logging.getLogger("localtailstackscale").setLevel(level)
 
-        # validation
-        if AUTHKEY_NAME not in os.environ:
-            LOG.warning(
-                "%s not found in environment. Check sidecar container logs for authorization instructions",
-                AUTHKEY_NAME,
-            )
-
     def on_platform_ready(self):
         LOG.info("%s: localstack is running", self.name)
 
+        # if we are not running in docker then exit
+        if not config.is_in_docker:
+            LOG.warning("not running as a docker container")
+            return
+
+        # get the container name
+        localstack_container_id = socket.gethostname()
+
+        # get environment variables to forward
+        # TODO: lock this down
+        env: dict[str, str] = {}
+        for key, value in os.environ.items():
+            if key.startswith("TS_"):
+                env[key] = value
+
         # start up tailscale container
         container_config = ContainerConfiguration(
-            # TODO: public image
-            image_name="srwalker101/tsproxy",
-            env_vars={
-                "TSPROXY_UPSTREAM_URL": f"http://{get_endpoint_for_network()}:4566",
-                "TSPROXY_PORT": os.getenv("TSPROXY_PORT", "4566"),
-                "TSPROXY_HOSTNAME": os.getenv("TSPROXY_HOSTNAME", ""),
-                "TS_AUTHKEY": os.getenv("TS_AUTHKEY", ""),
-            },
+            image_name="tailscale/tailscale",
+            env_vars=env,
+            network=f"container:{localstack_container_id}",
         )
         # TODO: error handling
-        container_id = DOCKER_CLIENT.create_container_from_config(container_config)
-        DOCKER_CLIENT.start_container(container_id)
-        self.running_container = RunningContainer(container_id, container_config)
-        self.running_container.wait_until_ready()
+        self.container_id = DOCKER_CLIENT.create_container_from_config(container_config)
+        _ = DOCKER_CLIENT.start_container(self.container_id)
+        log_stream = DOCKER_CLIENT.stream_container_logs(self.container_id)
+        self.log_printer = threading.Thread(
+            target=print_logs, args=(log_stream,), daemon=True
+        )
+        self.log_printer.start()
 
     def on_platform_shutdown(self):
         LOG.info("%s shutting down", self.name)
-        if self.running_container:
-            self.running_container.shutdown()
+        if self.container_id:
+            DOCKER_CLIENT.remove_container(self.container_id, force=True)

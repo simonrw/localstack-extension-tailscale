@@ -30,7 +30,4 @@ publish: clean-dist venv dist
 clean-dist: clean
 	rm -rf dist/
 
-docker-build:
-	docker build -t $(DOCKER_IMAGE_NAME) .
-
 .PHONY: clean clean-dist dist install publish
