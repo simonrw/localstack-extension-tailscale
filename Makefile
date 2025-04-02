@@ -1,4 +1,3 @@
-DOCKER_IMAGE_NAME := srwalker101/tsproxy
 VENV_BIN = python3 -m venv
 VENV_DIR ?= .venv
 VENV_ACTIVATE = $(VENV_DIR)/bin/activate
