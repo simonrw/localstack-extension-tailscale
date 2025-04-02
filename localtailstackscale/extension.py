@@ -16,32 +16,22 @@ from localstack.utils.container_utils.container_client import (
     VolumeMappings,
 )
 from localstack.utils.run import FuncThread
+from localtailstackscale.container import TailscaleContainer
 
 logging.basicConfig(level=logging.DEBUG)
 LOG = logging.getLogger("localstack.extension.tailscale")
 
-TAILSCALE_STATE_DIR = "/var/lib/tailscale"
-
-
-def print_logs(stream: Iterable[bytes]):
-    for line in stream:
-        LOG.debug("[tailscale] %s", line.decode().strip())
 
 
 @final
 class LocalStackTailscale(Extension):
     name: str = "localtailstackscale"
     requirements = []
-    volume: str
     log_printer: FuncThread | None
 
     def __init__(self):
+        self.tailscale_container = TailscaleContainer()
         self.container_id: str | None = None
-        extension_container_path = (
-            Path(config.dirs.cache) / "localstack-tailscale" / "state"
-        )
-        extension_container_path.mkdir(parents=True, exist_ok=True)
-        self.volume = get_host_path_for_path_in_docker(str(extension_container_path))
         self.log_printer = None
 
     def on_extension_load(self):
@@ -50,8 +40,6 @@ class LocalStackTailscale(Extension):
         else:
             level = logging.INFO
         logging.getLogger("localtailstackscale").setLevel(level)
-
-        LOG.debug("storing tailscale state at '%s'", self.volume)
 
     def on_platform_ready(self):
         LOG.info("%s: localstack is running", self.name)
@@ -69,39 +57,7 @@ class LocalStackTailscale(Extension):
     def start_sidecar_container(self):
         # get the container name
         localstack_container_id = socket.gethostname()
-
-        # get environment variables to forward
-        # TODO: lock this down
-        env: dict[str, str] = {}
-        for key, value in os.environ.items():
-            if key.startswith("TS_"):
-                LOG.debug("including environment variable '%s'", key)
-                env[key] = value
-
-        # ensure the state directory is set if given
-        env["TS_STATE_DIR"] = TAILSCALE_STATE_DIR
-
-        # start up tailscale container
-        container_config = ContainerConfiguration(
-            image_name="tailscale/tailscale",
-            env_vars=env,
-            network=f"container:{localstack_container_id}",
-            volumes=VolumeMappings([(self.volume, TAILSCALE_STATE_DIR)]),
-        )
-        # TODO: error handling
-        self.container_id = DOCKER_CLIENT.create_container_from_config(container_config)
-        _ = DOCKER_CLIENT.start_container(self.container_id)
-        log_stream = DOCKER_CLIENT.stream_container_logs(self.container_id)
-
-        self.log_printer = FuncThread(
-            lambda params: print_logs(params[0]), params=(log_stream,)
-        )
-        self.log_printer.start()
+        self.tailscale_container.start(localstack_container_id)
 
     def stop_sidecar_container(self):
-        if self.log_printer:
-            self.log_printer.stop()
-
-        LOG.info("%s shutting down", self.name)
-        if self.container_id:
-            DOCKER_CLIENT.remove_container(self.container_id, force=True)
+        self.tailscale_container.stop()
