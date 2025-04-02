@@ -40,5 +40,5 @@ EXTENSION_DEV_MODE=1 localstack start -e TS_AUTHKEY=$TS_AUTHKEY
 To distribute your extension, simply upload it to your github account. Your extension can then be installed via:
 
 ```bash
-localstack extensions install "git+https://github.com/simonrw/localtailstackscale/#egg=localtailstackscale"
+localstack extensions install "git+https://github.com/simonrw/localstack-extension-tailscale/#egg=localstack_extension_tailscale"
 ```

@@ -6,7 +6,7 @@ from typing import final
 from localstack import config
 from localstack.extensions.api import Extension
 from localstack.utils.run import FuncThread
-from localtailstackscale.container import TailscaleContainer
+from localstack_extension_tailscale.container import TailscaleContainer
 
 logging.basicConfig(level=logging.DEBUG)
 LOG = logging.getLogger("localstack.extension.tailscale")
@@ -15,7 +15,7 @@ LOG = logging.getLogger("localstack.extension.tailscale")
 
 @final
 class LocalStackTailscale(Extension):
-    name: str = "localtailstackscale"
+    name: str = "localstack-extension-tailscale"
     requirements = []
     log_printer: FuncThread | None
 
@@ -29,7 +29,7 @@ class LocalStackTailscale(Extension):
             level = logging.DEBUG
         else:
             level = logging.INFO
-        logging.getLogger("localtailstackscale").setLevel(level)
+        LOG.setLevel(level)
 
     def on_platform_ready(self):
         LOG.info("%s: localstack is running", self.name)
