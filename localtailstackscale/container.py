@@ -33,8 +33,8 @@ class TailscaleContainer:
                 LOG.debug("including environment variable '%s'", key)
                 env[key] = value
 
-        # ensure the state directory is set if given
-        env["TS_STATE_DIR"] = TAILSCALE_STATE_DIR
+        # ensure the state directory is set if not given
+        env.setdefault("TS_STATE_DIR", TAILSCALE_STATE_DIR)
 
         # start up tailscale container
         extension_container_path = (
