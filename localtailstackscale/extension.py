@@ -1,20 +1,10 @@
 from collections.abc import Iterable
 import logging
-import os
 import socket
-from pathlib import Path
 from typing import final
 
 from localstack import config
 from localstack.extensions.api import Extension
-from localstack.utils.docker_utils import (
-    DOCKER_CLIENT,
-    get_host_path_for_path_in_docker,
-)
-from localstack.utils.container_utils.container_client import (
-    ContainerConfiguration,
-    VolumeMappings,
-)
 from localstack.utils.run import FuncThread
 from localtailstackscale.container import TailscaleContainer
 
