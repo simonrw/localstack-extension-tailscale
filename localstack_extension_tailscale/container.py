@@ -3,7 +3,10 @@ import os
 from pathlib import Path
 from typing import Iterable
 from localstack import config
-from localstack.utils.container_utils.container_client import ContainerConfiguration, VolumeMappings
+from localstack.utils.container_utils.container_client import (
+    ContainerConfiguration,
+    VolumeMappings,
+)
 from localstack.utils.docker_utils import (
     DOCKER_CLIENT,
     get_host_path_for_path_in_docker,
@@ -14,19 +17,18 @@ CONTAINER_NAME = "tailscale/tailscale"
 TAILSCALE_STATE_DIR = "/var/lib/tailscale"
 LOG = logging.getLogger("localstack.extension.tailscale")
 
+
 def print_logs(stream: Iterable[bytes]):
     for line in stream:
         LOG.debug("[tailscale] %s", line.decode().strip())
 
 
-
 class TailscaleContainer:
-    container_id: str | None
-    log_printer: FuncThread | None
+    container_id: str | None = None
+    log_printer: FuncThread | None = None
 
-    def start(self, localstack_container_id: str):
+    def start(self, localstack_container_id: str, mount_volume_dir: bool = False):
         # get environment variables to forward
-        # TODO: lock this down
         env: dict[str, str] = {}
         for key, value in os.environ.items():
             if key.startswith("TS_"):
@@ -37,16 +39,20 @@ class TailscaleContainer:
         env.setdefault("TS_STATE_DIR", TAILSCALE_STATE_DIR)
 
         # start up tailscale container
-        extension_container_path = (
-            Path(config.dirs.cache) / "localstack-tailscale" / "state"
-        )
-        extension_container_path.mkdir(parents=True, exist_ok=True)
-        volume = get_host_path_for_path_in_docker(str(extension_container_path))
+        volume_mappings = VolumeMappings()
+        if mount_volume_dir:
+            extension_container_path = (
+                Path(config.dirs.cache) / "localstack-tailscale" / "state"
+            )
+            extension_container_path.mkdir(parents=True, exist_ok=True)
+            volume = get_host_path_for_path_in_docker(str(extension_container_path))
+            volume_mappings.add((volume, TAILSCALE_STATE_DIR))
+
         container_config = ContainerConfiguration(
             image_name="tailscale/tailscale",
             env_vars=env,
             network=f"container:{localstack_container_id}",
-            volumes=VolumeMappings([(volume, TAILSCALE_STATE_DIR)]),
+            volumes=volume_mappings,
         )
         # TODO: error handling
         self.container_id = DOCKER_CLIENT.create_container_from_config(container_config)

@@ -12,7 +12,6 @@ logging.basicConfig(level=logging.DEBUG)
 LOG = logging.getLogger("localstack.extension.tailscale")
 
 
-
 @final
 class LocalStackTailscale(Extension):
     name: str = "localstack-extension-tailscale"
