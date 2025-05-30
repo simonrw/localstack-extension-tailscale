@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import Iterable
 from localstack import config
+from localstack.utils.sync import wait_until
 from localstack.utils.container_utils.container_client import (
     ContainerConfiguration,
     VolumeMappings,
@@ -16,16 +17,20 @@ from localstack.utils.threads import FuncThread
 CONTAINER_NAME = "tailscale/tailscale"
 TAILSCALE_STATE_DIR = "/var/lib/tailscale"
 LOG = logging.getLogger("localstack.extension.tailscale")
-
-
-def print_logs(stream: Iterable[bytes]):
-    for line in stream:
-        LOG.debug("[tailscale] %s", line.decode().strip())
+READY_SENTINEL = "Startup complete"
 
 
 class TailscaleContainer:
-    container_id: str | None = None
-    log_printer: FuncThread | None = None
+    container_id: str | None
+    log_printer: FuncThread | None
+    log_lines: list[str]
+    seen_log_lines: set[str]
+
+    def __init__(self):
+        self.container_id = None
+        self.log_printer = None
+        self.log_lines = []
+        self.seen_log_lines = set()
 
     def start(self, localstack_container_id: str, mount_volume_dir: bool = False):
         # get environment variables to forward
@@ -60,9 +65,20 @@ class TailscaleContainer:
         log_stream = DOCKER_CLIENT.stream_container_logs(self.container_id)
 
         self.log_printer = FuncThread(
-            lambda params: print_logs(params[0]), params=(log_stream,)
+            lambda params: self._print_logs(params[0]), params=(log_stream,)
         )
         self.log_printer.start()
+
+    def wait(self, timeout: int = 30):
+        def check_is_up() -> bool:
+            for line in self.log_lines:
+                if READY_SENTINEL in line:
+                    return True
+
+            return False
+
+        if not wait_until(check_is_up, wait=1, max_retries=timeout, strategy="static"):
+            raise TimeoutError("Container not ready")
 
     def stop(self):
         if self.log_printer:
@@ -71,3 +87,13 @@ class TailscaleContainer:
         LOG.info("shutting down Tailscale sidecar")
         if self.container_id:
             DOCKER_CLIENT.remove_container(self.container_id, force=True)
+
+    def _print_logs(self, stream: Iterable[bytes]):
+        for line in stream:
+            text = line.decode().strip()
+            if text in self.seen_log_lines:
+                continue
+
+            LOG.debug("[tailscale] %s", text)
+            self.log_lines.append(text)
+            self.seen_log_lines.add(text)
