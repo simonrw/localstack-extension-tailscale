@@ -1,3 +1,4 @@
+import os
 import logging
 import pytest
 
@@ -8,8 +9,22 @@ from localstack_extension_tailscale.container import TailscaleContainer
 
 @pytest.fixture(scope="module")
 def localstack_container_id():
-    with LocalStackContainer("localstack/localstack") as localstack:
+    container = LocalStackContainer("localstack/localstack")
+    env = {"DEBUG": "1", "LS_LOG": "trace"}
+    for key, value in env.items():
+        container.with_env(key, value)
+
+    if os.path.exists("/var/run/docker.sock"):
+        container.with_volume_mapping("/var/run/docker.sock", "/var/run/docker.sock")
+
+    with container as localstack:
         yield localstack.get_wrapped_container().id
+
+        if localstack._container:
+            logs = localstack._container.logs().decode()
+
+            print("# LocalStack logs")
+            print(logs)
 
 
 def test_start_container(caplog, localstack_container_id):
