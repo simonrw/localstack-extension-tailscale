@@ -35,7 +35,6 @@ jobs:
         uv pip install -e .[dev]
     - name: Test with pytest
       run: |
-        .venv/bin/pytest tests -o log_cli=true
+        .venv/bin/pytest tests -o log_cli=true --capture no
       env:
         TS_AUTHKEY: "${{ secrets.TS_AUTHKEY }}"
-
