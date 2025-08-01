@@ -1,0 +1,19 @@
+name: Publish to PyPI
+
+on:
+  workflow_run:
+    workflows:
+      - Test extension
+    types:
+      - completed
+    # branches:
+    #   - main
+
+jobs:
+  dummy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Dummy step
+        run: echo "Dummy step"
+
