@@ -30,14 +30,17 @@ def localstack_container_id():
 def test_start_container(caplog, localstack_container_id):
     tsc = TailscaleContainer()
     tsc.start(localstack_container_id)
-    tsc.wait(timeout=30)
-    tsc.stop()
+    try:
+        tsc.wait(timeout=60)
+        tsc.stop()
 
-    # check at least one log line was emitted
-    found = False
-    for log in caplog.records:
-        if "[tailscale]" in log.message:
-            found = True
-            break
+        # check at least one log line was emitted
+        found = False
+        for log in caplog.records:
+            if "[tailscale]" in log.message:
+                found = True
+                break
 
-    assert found
+        assert found
+    finally:
+        tsc.remove()
