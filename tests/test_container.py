@@ -5,6 +5,12 @@ import pytest
 from testcontainers.localstack import LocalStackContainer
 
 from localstack_extension_tailscale.container import TailscaleContainer
+from localstack.logging.setup import setup_logging
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_logging():
+    setup_logging(log_level=logging.DEBUG)
 
 
 @pytest.fixture(scope="module")
@@ -30,14 +36,17 @@ def localstack_container_id():
 def test_start_container(caplog, localstack_container_id):
     tsc = TailscaleContainer()
     tsc.start(localstack_container_id)
-    tsc.wait(timeout=30)
-    tsc.stop()
+    try:
+        tsc.wait(timeout=60)
+        tsc.stop()
 
-    # check at least one log line was emitted
-    found = False
-    for log in caplog.records:
-        if "[tailscale]" in log.message:
-            found = True
-            break
+        # check at least one log line was emitted
+        found = False
+        for log in caplog.records:
+            if "[tailscale]" in log.message:
+                found = True
+                break
 
-    assert found
+        assert found
+    finally:
+        tsc.remove()

@@ -18,11 +18,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Cache docker images
-      uses: ScribeMD/docker-cache@0.5.0
+    - name: Set up nodejs
+      uses: actions/setup-node@v4
       with:
-        key: docker-${{ runner.os }}
+        node-version: "22.x"
+    - uses: actions/checkout@v4
     - name: Pre-pull docker images
       run: |
         docker pull localstack/localstack
@@ -32,7 +32,7 @@ jobs:
       with:
         python-version: "3.11"
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@v6
     - name: Install dependencies
       run: |
         uv venv

@@ -6,25 +6,15 @@ build-backend = "setuptools.build_meta"
 name = "localstack-extension-tailscale"
 version = "0.1.0"
 description = "LocalStack/Tailscale integration"
-authors = [
-    { name = "Simon Walker", email = "s.r.walker101@gmail.com" },
-]
+authors = [{ name = "Simon Walker", email = "s.r.walker101@gmail.com" }]
 requires-python = ">=3.11"
-dependencies = [
-    "localstack>=4.0",
-]
+dependencies = ["localstack>=4.0"]
 
 [project.optional-dependencies]
-dev = [
-    "pytest",
-    "testcontainers",
-    "boto3",
-]
+dev = ["pytest", "testcontainers", "boto3", "ruff"]
 
 [tool.setuptools.dynamic]
 readme = { file = ["README.md"], content-type = "text/markdown; charset=UTF-8" }
 
 [project.entry-points."localstack.extensions"]
 localstack_extension_tailscale = "localstack_extension_tailscale.extension:LocalStackTailscale"
-
-

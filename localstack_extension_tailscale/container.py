@@ -6,6 +6,7 @@ from localstack import config
 from localstack.utils.sync import wait_until
 from localstack.utils.container_utils.container_client import (
     ContainerConfiguration,
+    NoSuchContainer,
     VolumeMappings,
 )
 from localstack.utils.docker_utils import (
@@ -69,15 +70,35 @@ class TailscaleContainer:
         )
         self.log_printer.start()
 
-    def wait(self, timeout: int = 30):
-        def check_is_up() -> bool:
-            for line in self.log_lines:
-                if READY_SENTINEL in line:
-                    return True
+    def _container_ready(self) -> bool:
+        for line in self.log_lines:
+            if READY_SENTINEL in line:
+                return True
 
+        return False
+
+    def _check_is_up(self) -> bool:
+        if self._container_exited():
+            LOG.error(
+                f"Tailscale container '%s' exited unexpectedly. Logs: %s",
+                self.container_id,
+                "; ".join(self.log_lines),
+            )
+            raise RuntimeError("Tailscale container exited")
+
+        return self._container_ready()
+
+    def _container_exited(self) -> bool:
+        try:
+            DOCKER_CLIENT.inspect_container(self.container_id)
             return False
+        except NoSuchContainer:
+            return True
 
-        if not wait_until(check_is_up, wait=1, max_retries=timeout, strategy="static"):
+    def wait(self, timeout: int = 30):
+        if not wait_until(
+            self._check_is_up, wait=1, max_retries=timeout, strategy="static"
+        ):
             raise TimeoutError("Container not ready")
 
     def stop(self):
@@ -85,6 +106,11 @@ class TailscaleContainer:
             self.log_printer.stop()
 
         LOG.info("shutting down Tailscale sidecar")
+        self.remove()
+
+        self.container_id = None
+
+    def remove(self) -> None:
         if self.container_id:
             DOCKER_CLIENT.remove_container(self.container_id, force=True)
 
