@@ -2,6 +2,7 @@ VENV_BIN = python3 -m venv
 VENV_DIR ?= .venv
 VENV_ACTIVATE = $(VENV_DIR)/bin/activate
 VENV_RUN = . $(VENV_ACTIVATE)
+ACT_ARGS :=
 
 venv: $(VENV_ACTIVATE)
 
@@ -28,5 +29,8 @@ publish: clean-dist venv dist
 
 clean-dist: clean
 	rm -rf dist/
+
+ci-local:
+	act pull-request --secret TS_AUTHKEY=$(TS_AUTHKEY) --job test $(ACT_ARGS)
 
 .PHONY: clean clean-dist dist install publish
