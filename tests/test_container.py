@@ -5,7 +5,11 @@ import pytest
 from testcontainers.localstack import LocalStackContainer
 
 from localstack_extension_tailscale.container import TailscaleContainer
+from localstack.logging.setup import setup_logging
 
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_logging():
+    setup_logging(log_level=logging.DEBUG)
 
 @pytest.fixture(scope="module")
 def localstack_container_id():
