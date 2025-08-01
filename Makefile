@@ -18,6 +18,10 @@ clean:
 	rm -rf .eggs/
 	rm -rf *.egg-info/
 
+.PHONY: format
+format:
+	ruff format .
+
 install: venv
 	$(VENV_RUN); python setup.py develop
 

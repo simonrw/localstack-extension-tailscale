@@ -79,20 +79,26 @@ class TailscaleContainer:
 
     def _check_is_up(self) -> bool:
         if self._container_exited():
-            LOG.error(f"Tailscale container '%s' exited unexpectedly. Logs: %s", self.container_id, "; ".join(self.log_lines))
+            LOG.error(
+                f"Tailscale container '%s' exited unexpectedly. Logs: %s",
+                self.container_id,
+                "; ".join(self.log_lines),
+            )
             raise RuntimeError("Tailscale container exited")
 
         return self._container_ready()
 
     def _container_exited(self) -> bool:
         try:
-           DOCKER_CLIENT.inspect_container(self.container_id)
-           return False
+            DOCKER_CLIENT.inspect_container(self.container_id)
+            return False
         except NoSuchContainer:
-           return True
+            return True
 
     def wait(self, timeout: int = 30):
-        if not wait_until(self._check_is_up, wait=1, max_retries=timeout, strategy="static"):
+        if not wait_until(
+            self._check_is_up, wait=1, max_retries=timeout, strategy="static"
+        ):
             raise TimeoutError("Container not ready")
 
     def stop(self):
